@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passkey Auth API</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0f1117;
+            --card: #1a1d27;
+            --border: #2a2d3a;
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --input-bg: #0f1117;
+            --radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        header {
+            text-align: center;
+            padding: 32px 0 24px;
+        }
+
+        header .icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary), #a78bfa);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 28px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Support Banner */
+        .support-banner {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .support-banner .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .support-banner .dot.green { background: var(--success); box-shadow: 0 0 8px rgba(34,197,94,.4); }
+        .support-banner .dot.red { background: var(--danger); box-shadow: 0 0 8px rgba(239,68,68,.4); }
+        .support-banner .dot.yellow { background: var(--warning); box-shadow: 0 0 8px rgba(245,158,11,.4); }
+
+        .support-banner .info { flex: 1; }
+        .support-banner .info .title { font-size: 14px; font-weight: 600; }
+        .support-banner .info .subtitle { font-size: 12px; color: var(--text-muted); }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .tab:hover { color: var(--text); }
+        .tab.active { background: var(--primary); color: #fff; }
+
+        /* Panels */
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .card .desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* Form */
+        .field {
+            margin-bottom: 16px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .field input:focus { border-color: var(--primary); }
+        .field input::placeholder { color: var(--text-dim); }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+        .btn-danger { background: rgba(239,68,68,.15); color: var(--danger); border: 1px solid rgba(239,68,68,.3); }
+        .btn-danger:hover { background: rgba(239,68,68,.25); }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover { border-color: var(--text-muted); color: var(--text); }
+
+        .btn-sm {
+            width: auto;
+            padding: 6px 14px;
+            font-size: 13px;
+        }
+
+        .divider {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 12px;
+            margin: 16px 0;
+            position: relative;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .divider::before { left: 0; }
+        .divider::after { right: 0; }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            animation: slideIn .3s ease;
+            max-width: 380px;
+        }
+
+        .toast.success { background: rgba(34,197,94,.15); color: var(--success); border: 1px solid rgba(34,197,94,.3); }
+        .toast.error { background: rgba(239,68,68,.15); color: var(--danger); border: 1px solid rgba(239,68,68,.3); }
+        .toast.info { background: rgba(99,102,241,.15); color: var(--primary-hover); border: 1px solid rgba(99,102,241,.3); }
+
+        @keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+
+        /* Passkey List */
+        .passkey-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+            gap: 12px;
+        }
+
+        .passkey-item:last-child { border-bottom: none; }
+
+        .passkey-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(99,102,241,.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .passkey-info { flex: 1; min-width: 0; }
+        .passkey-info .name { font-size: 14px; font-weight: 600; }
+        .passkey-info .meta { font-size: 12px; color: var(--text-muted); }
+
+        .passkey-actions { display: flex; gap: 6px; }
+
+        /* User Profile */
+        .profile-card {
+            text-align: center;
+            padding: 32px 24px;
+        }
+
+        .profile-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #a78bfa);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .profile-name { font-size: 20px; font-weight: 700; }
+        .profile-email { font-size: 14px; color: var(--text-muted); }
+
+        .hidden { display: none !important; }
+
+        /* Spinner */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state {
+            text-align: center;
+            padding: 32px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .emoji { font-size: 40px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="toast-container" id="toasts"></div>
+
+<div class="container">
+    <header>
+        <div class="icon">&#128274;</div>
+        <h1>Passkey Auth</h1>
+        <p>Secure passwordless authentication</p>
+    </header>
+
+    <!-- Support Banner -->
+    <div class="support-banner" id="supportBanner">
+        <div class="dot yellow" id="supportDot"></div>
+        <div class="info">
+            <div class="title" id="supportTitle">Checking passkey support...</div>
+            <div class="subtitle" id="supportSubtitle">Detecting your device capabilities</div>
+        </div>
+    </div>
+
+    <!-- LOGGED OUT VIEW -->
+    <div id="loggedOutView">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('login')">Sign In</button>
+            <button class="tab" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <!-- LOGIN PANEL -->
+        <div class="panel active" id="loginPanel">
+            <div class="card">
+                <h2>Sign in with Passkey</h2>
+                <p class="desc">Use your fingerprint, face, or device PIN to sign in securely.</p>
+
+                <div class="field">
+                    <label>Email (optional for username-less login)</label>
+                    <input type="email" id="loginEmail" placeholder="you@example.com">
+                </div>
+
+                <button class="btn btn-primary" id="btnPasskeyLogin" onclick="passkeyLogin()">
+                    &#128275;&ensp;Sign in with Passkey
+                </button>
+
+                <div class="divider">or</div>
+
+                <button class="btn btn-primary" id="btnDiscoverableLogin" onclick="passkeyLogin(true)" style="background: rgba(99,102,241,.15); color: var(--primary-hover); border: 1px solid rgba(99,102,241,.3);">
+                    &#10024;&ensp;Username-less Sign In
+                </button>
+
+                <div class="divider">backup</div>
+
+                <div class="field">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter password">
+                </div>
+
+                <button class="btn btn-outline" onclick="passwordLogin()">
+                    Sign in with Password
+                </button>
+            </div>
+        </div>
+
+        <!-- REGISTER PANEL -->
+        <div class="panel" id="registerPanel">
+            <div class="card">
+                <h2>Create Account</h2>
+                <p class="desc">Register and set up a passkey for secure access.</p>
+
+                <div class="field">
+                    <label>Name</label>
+                    <input type="text" id="regName" placeholder="Your name">
+                </div>
+
+                <div class="field">
+                    <label>Email</label>
+                    <input type="email" id="regEmail" placeholder="you@example.com">
+                </div>
+
+                <div class="field">
+                    <label>Password (optional backup)</label>
+                    <input type="password" id="regPassword" placeholder="Leave empty for passkey-only">
+                </div>
+
+                <button class="btn btn-primary" onclick="registerAccount()">
+                    Create Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PASSKEY SETUP (after registration) -->
+    <div id="passkeySetupView" class="hidden">
+        <div class="card">
+            <h2>Set Up Your Passkey</h2>
+            <p class="desc">Register a passkey to secure your account. Your device will prompt you for biometric or PIN verification.</p>
+
+            <div class="field">
+                <label>Device Name</label>
+                <input type="text" id="deviceName" placeholder="e.g. My Windows Laptop">
+            </div>
+
+            <button class="btn btn-primary" onclick="registerPasskey()">
+                &#128274;&ensp;Register Passkey
+            </button>
+
+            <div style="margin-top: 12px;">
+                <button class="btn btn-outline" onclick="skipPasskeySetup()">
+                    Skip for now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGGED IN VIEW -->
+    <div id="loggedInView" class="hidden">
+        <div class="card profile-card">
+            <div class="profile-avatar" id="profileAvatar">A</div>
+            <div class="profile-name" id="profileName">User</div>
+            <div class="profile-email" id="profileEmail">user@example.com</div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                <h2>Your Passkeys</h2>
+                <button class="btn btn-primary btn-sm" onclick="addPasskey()">+ Add</button>
+            </div>
+            <div id="passkeyList">
+                <div class="empty-state">
+                    <div class="emoji">&#128273;</div>
+                    <p>Loading passkeys...</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-danger" onclick="logout()" style="margin-top: 8px;">
+            Sign Out
+        </button>
+    </div>
+</div>
+
+<script>
+const API = window.location.origin + '/api';
+let authToken = localStorage.getItem('auth_token');
+let currentUser = null;
+let newUserId = null;
+
+// ─── Helpers ───
+
+function base64urlToBuffer(base64url) {
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = (4 - (base64.length % 4)) % 4;
+    const padded = base64 + '='.repeat(pad);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function bufferToBase64url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function api(method, path, body = null, auth = false) {
+    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    if (auth && authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API + path, opts);
+    return await res.json();
+}
+
+function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', (tab === 'login' ? i === 0 : i === 1));
+    });
+    document.getElementById('loginPanel').classList.toggle('active', tab === 'login');
+    document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+}
+
+function showView(view) {
+    document.getElementById('loggedOutView').classList.toggle('hidden', view !== 'loggedOut');
+    document.getElementById('passkeySetupView').classList.toggle('hidden', view !== 'passkeySetup');
+    document.getElementById('loggedInView').classList.toggle('hidden', view !== 'loggedIn');
+}
+
+function setLoading(btn, loading) {
+    if (loading) {
+        btn.dataset.origHtml = btn.innerHTML;
+        btn.innerHTML = '<div class="spinner"></div> Please wait...';
+        btn.disabled = true;
+    } else {
+        btn.innerHTML = btn.dataset.origHtml || btn.innerHTML;
+        btn.disabled = false;
+    }
+}
+
+// ─── Support Check ───
+
+async function checkSupport() {
+    const dot = document.getElementById('supportDot');
+    const title = document.getElementById('supportTitle');
+    const subtitle = document.getElementById('supportSubtitle');
+
+    const webauthnAvailable = typeof window.PublicKeyCredential !== 'undefined';
+
+    if (!webauthnAvailable) {
+        dot.className = 'dot red';
+        title.textContent = 'Passkeys not supported';
+        subtitle.textContent = 'Your browser does not support WebAuthn. Use password login.';
+        return;
+    }
+
+    let platformAvailable = false;
+    try {
+        platformAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch (e) {}
+
+    let conditionalAvailable = false;
+    try {
+        if (typeof PublicKeyCredential.isConditionalMediationAvailable === 'function') {
+            conditionalAvailable = await PublicKeyCredential.isConditionalMediationAvailable();
+        }
+    } catch (e) {}
+
+    if (platformAvailable) {
+        dot.className = 'dot green';
+        title.textContent = 'Passkeys fully supported';
+        subtitle.textContent = 'Your device supports biometric or secure unlock authentication.';
+    } else {
+        dot.className = 'dot yellow';
+        title.textContent = 'Passkeys partially supported';
+        subtitle.textContent = 'WebAuthn is available. A security key or linked device may be used.';
+    }
+}
+
+// ─── Register Account ───
+
+async function registerAccount() {
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+
+    if (!name || !email) return toast('Name and email are required.', 'error');
+
+    const body = { name, email };
+    if (password) {
+        body.password = password;
+        body.password_confirmation = password;
+    }
+
+    const res = await api('POST', '/auth/register', body);
+
+    if (!res.success) {
+        const msg = res.errors ? Object.values(res.errors).flat().join(' ') : res.message;
+        return toast(msg, 'error');
+    }
+
+    toast('Account created! Now set up your passkey.', 'success');
+    newUserId = res.data.user.id;
+    currentUser = res.data.user;
+    document.getElementById('deviceName').value = '';
+    showView('passkeySetup');
+}
+
+// ─── Register Passkey ───
+
+async function registerPasskey(isAdd = false) {
+    const userId = isAdd ? currentUser.id : newUserId;
+    const deviceName = isAdd
+        ? prompt('Name this passkey (e.g. My Phone):')
+        : document.getElementById('deviceName').value.trim();
+
+    if (!deviceName) return toast('Please provide a device name.', 'error');
+
+    try {
+        // 1. Get options
+        const optPath = isAdd ? '/auth/passkeys/add/options' : '/auth/passkey/register/options';
+        const optBody = isAdd ? {} : { user_id: userId };
+        const optRes = await api('POST', optPath, optBody, isAdd);
+
+        if (!optRes.success) return toast(optRes.message, 'error');
+
+        const publicKey = optRes.data.publicKey;
+
+        // 2. Convert for browser
+        publicKey.challenge = base64urlToBuffer(publicKey.challenge);
+        publicKey.user.id = new TextEncoder().encode(publicKey.user.id);
+        if (publicKey.excludeCredentials) {
+            publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({
+                ...c, id: base64urlToBuffer(c.id)
+            }));
+        }
+
+        // 3. Create credential via browser/OS prompt
+        toast('Complete the verification on your device...', 'info');
+        const credential = await navigator.credentials.create({ publicKey });
+
+        // 4. Serialize response
+        const body = {
+            id: credential.id,
+            rawId: bufferToBase64url(credential.rawId),
+            type: credential.type,
+            response: {
+                clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                attestationObject: bufferToBase64url(credential.response.attestationObject),
+                transports: credential.response.getTransports?.() || [],
+            },
+            authenticatorAttachment: credential.authenticatorAttachment || undefined,
+            device_name: deviceName,
+        };
+
+        if (credential.response.getPublicKey) {
+            body.response.publicKey = bufferToBase64url(credential.response.getPublicKey());
+        }
+        if (credential.response.getAuthenticatorData) {
+            body.response.authenticatorData = bufferToBase64url(credential.response.getAuthenticatorData());
+        }
+
+        if (!isAdd) body.user_id = userId;
+
+        // 5. Verify
+        const verifyPath = isAdd ? '/auth/passkeys/add/verify' : '/auth/passkey/register/verify';
+        const verifyRes = await api('POST', verifyPath, body, isAdd);
+
+        if (!verifyRes.success) return toast(verifyRes.message, 'error');
+
+        toast('Passkey registered successfully!', 'success');
+
+        if (verifyRes.data.token) {
+            authToken = verifyRes.data.token;
+            localStorage.setItem('auth_token', authToken);
+        }
+
+        if (isAdd) {
+            loadPasskeys();
+        } else {
+            await loadProfile();
+            showView('loggedIn');
+            loadPasskeys();
+        }
+
+    } catch (err) {
+        if (err.name === 'NotAllowedError') {
+            toast('Passkey registration was cancelled.', 'error');
+        } else {
+            toast('Error: ' + err.message, 'error');
+            console.error(err);
+        }
+    }
+}
+
+function skipPasskeySetup() {
+    toast('You can add a passkey later from your profile.', 'info');
+    showView('loggedOut');
+}
+
+function addPasskey() {
+    registerPasskey(true);
+}
+
+// ─── Passkey Login ───
+
+async function passkeyLogin(discoverable = false) {
+    const email = discoverable ? null : document.getElementById('loginEmail').value.trim();
+
+    try {
+        // 1. Get options
+        const optRes = await api('POST', '/auth/passkey/login/options', { email: email || undefined });
+        if (!optRes.success) return toast(optRes.message, 'error');
+
+        const publicKey = optRes.data.publicKey;
+
+        // 2. Convert for browser
+        publicKey.challenge = base64urlToBuffer(publicKey.challenge);
+        if (publicKey.allowCredentials) {
+            publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({
+                ...c, id: base64urlToBuffer(c.id)
+            }));
+        }
+
+        // 3. Get assertion from browser/OS
+        toast('Complete the verification on your device...', 'info');
+        const assertion = await navigator.credentials.get({ publicKey });
+
+        // 4. Serialize
+        const body = {
+            id: assertion.id,
+            rawId: bufferToBase64url(assertion.rawId),
+            type: assertion.type,
+            response: {
+                clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
+                authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
+                signature: bufferToBase64url(assertion.response.signature),
+                userHandle: assertion.response.userHandle
+                    ? bufferToBase64url(assertion.response.userHandle)
+                    : null,
+            },
+            authenticatorAttachment: assertion.authenticatorAttachment || undefined,
+        };
+
+        // 5. Verify
+        const verifyRes = await api('POST', '/auth/passkey/login/verify', body);
+
+        if (!verifyRes.success) return toast(verifyRes.message, 'error');
+
+        authToken = verifyRes.data.token;
+        localStorage.setItem('auth_token', authToken);
+        currentUser = verifyRes.data.user;
+        toast('Welcome back, ' + currentUser.name + '!', 'success');
+        showProfile();
+        showView('loggedIn');
+        loadPasskeys();
+
+    } catch (err) {
+        if (err.name === 'NotAllowedError') {
+            toast('Authentication was cancelled.', 'error');
+        } else {
+            toast('Error: ' + err.message, 'error');
+            console.error(err);
+        }
+    }
+}
+
+// ─── Password Login ───
+
+async function passwordLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) return toast('Email and password are required.', 'error');
+
+    const res = await api('POST', '/auth/login/password', { email, password });
+
+    if (!res.success) return toast(res.message, 'error');
+
+    authToken = res.data.token;
+    localStorage.setItem('auth_token', authToken);
+    currentUser = res.data.user;
+    toast('Welcome back, ' + currentUser.name + '!', 'success');
+    showProfile();
+    showView('loggedIn');
+    loadPasskeys();
+}
+
+// ─── Profile ───
+
+async function loadProfile() {
+    const res = await api('GET', '/auth/me', null, true);
+    if (res.success) {
+        currentUser = res.data.user;
+        showProfile();
+    }
+}
+
+function showProfile() {
+    if (!currentUser) return;
+    document.getElementById('profileAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+    document.getElementById('profileName').textContent = currentUser.name;
+    document.getElementById('profileEmail').textContent = currentUser.email;
+}
+
+// ─── Passkey List ───
+
+async function loadPasskeys() {
+    const res = await api('GET', '/auth/passkeys', null, true);
+    const container = document.getElementById('passkeyList');
+
+    if (!res.success || !res.data.passkeys.length) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="emoji">&#128273;</div>
+                <p>No passkeys registered yet.<br>Add one to enable passwordless login.</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = res.data.passkeys.map(pk => `
+        <div class="passkey-item">
+            <div class="passkey-icon">&#128272;</div>
+            <div class="passkey-info">
+                <div class="name">${pk.device_name || 'Unnamed Passkey'}</div>
+                <div class="meta">
+                    Added ${new Date(pk.created_at).toLocaleDateString()}
+                    ${pk.last_used_at ? ' &middot; Last used ' + new Date(pk.last_used_at).toLocaleDateString() : ''}
+                    ${pk.backup_eligible ? ' &middot; Syncable' : ''}
+                </div>
+            </div>
+            <div class="passkey-actions">
+                <button class="btn btn-outline btn-sm" onclick="renamePasskey(${pk.id}, '${(pk.device_name || '').replace(/'/g, "\\'")}')">&#9998;</button>
+                <button class="btn btn-danger btn-sm" onclick="deletePasskey(${pk.id})">&#128465;</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function renamePasskey(id, currentName) {
+    const name = prompt('New name for this passkey:', currentName);
+    if (!name) return;
+
+    const res = await api('PATCH', '/auth/passkeys/' + id, { device_name: name }, true);
+    if (res.success) {
+        toast('Passkey renamed.', 'success');
+        loadPasskeys();
+    } else {
+        toast(res.message, 'error');
+    }
+}
+
+async function deletePasskey(id) {
+    if (!confirm('Delete this passkey? This cannot be undone.')) return;
+
+    const res = await api('DELETE', '/auth/passkeys/' + id, null, true);
+    if (res.success) {
+        toast('Passkey deleted.', 'success');
+        loadPasskeys();
+    } else {
+        toast(res.message, 'error');
+    }
+}
+
+// ─── Logout ───
+
+async function logout() {
+    await api('POST', '/auth/logout', null, true);
+    authToken = null;
+    currentUser = null;
+    localStorage.removeItem('auth_token');
+    toast('Signed out.', 'success');
+    showView('loggedOut');
+}
+
+// ─── Init ───
+
+async function init() {
+    checkSupport();
+
+    if (authToken) {
+        const res = await api('GET', '/auth/me', null, true);
+        if (res.success) {
+            currentUser = res.data.user;
+            showProfile();
+            showView('loggedIn');
+            loadPasskeys();
+            return;
+        } else {
+            // Token expired/invalid
+            authToken = null;
+            localStorage.removeItem('auth_token');
+        }
+    }
+    showView('loggedOut');
+}
+
+init();
+</script>
+</body>
+</html>

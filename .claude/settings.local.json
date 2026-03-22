@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan:*)",
+      "Bash(netstat -ano)",
+      "Bash(php -m)",
+      "Bash(php -i)"
+    ]
+  }
+}
