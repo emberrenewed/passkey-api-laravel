@@ -4,7 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__ . '/../routes/web.php',
         api: __DIR__ . '/../routes/api.php',
@@ -74,3 +74,19 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 429);
         });
     })->create();
+
+// Vercel serverless: use /tmp for writable paths since the filesystem is read-only.
+if (isset($_ENV['VERCEL']) || getenv('VERCEL')) {
+    $app->useStoragePath('/tmp/storage');
+    if (!is_dir('/tmp/storage/framework/views')) {
+        @mkdir('/tmp/storage/framework/views', 0755, true);
+    }
+    if (!is_dir('/tmp/storage/framework/cache')) {
+        @mkdir('/tmp/storage/framework/cache', 0755, true);
+    }
+    if (!is_dir('/tmp/storage/logs')) {
+        @mkdir('/tmp/storage/logs', 0755, true);
+    }
+}
+
+return $app;

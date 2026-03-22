@@ -1,0 +1,8 @@
+.git
+node_modules
+storage/logs/*
+storage/framework/cache/*
+storage/framework/views/*
+tests
+.env
+database/database.sqlite
