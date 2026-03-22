@@ -4,686 +4,562 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Passkey Auth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                colors: {
+                    brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
+                }
+            }
+        }
+    }
+    </script>
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        /* Custom animations */
+        .glass { background: rgba(255,255,255,.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .glass-dark { background: rgba(15,23,42,.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
 
-        :root {
-            --bg: #f8fafc;
-            --bg-subtle: #f1f5f9;
-            --card: #ffffff;
-            --border: #e2e8f0;
-            --border-light: #f1f5f9;
-            --primary: #4f46e5;
-            --primary-light: #6366f1;
-            --primary-bg: #eef2ff;
-            --primary-border: #c7d2fe;
-            --success: #059669;
-            --success-bg: #ecfdf5;
-            --success-border: #a7f3d0;
-            --danger: #dc2626;
-            --danger-bg: #fef2f2;
-            --danger-border: #fecaca;
-            --warning: #d97706;
-            --warning-bg: #fffbeb;
-            --warning-border: #fde68a;
-            --text: #0f172a;
-            --text-secondary: #475569;
-            --text-muted: #94a3b8;
-            --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
-            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1);
-            --radius: 16px;
-            --radius-sm: 10px;
-            --radius-xs: 8px;
-        }
+        /* Fingerprint Scanner Animation */
+        .fingerprint-container { position: relative; width: 120px; height: 150px; }
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .page-wrapper {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 24px 16px 48px;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 440px;
-        }
-
-        /* ── Header ── */
-        header {
-            text-align: center;
-            padding: 40px 0 32px;
-        }
-
-        .logo {
-            width: 64px;
-            height: 64px;
-            background: var(--primary);
-            border-radius: 20px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 14px rgba(79,70,229,.35);
-        }
-
-        .logo svg {
-            width: 32px;
-            height: 32px;
+        .fingerprint-svg { width: 120px; height: 150px; }
+        .fingerprint-svg path {
             fill: none;
-            stroke: #fff;
+            stroke: #c7d2fe;
             stroke-width: 2;
             stroke-linecap: round;
-            stroke-linejoin: round;
+            stroke-dasharray: 300;
+            stroke-dashoffset: 300;
         }
 
-        header h1 {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text);
-            letter-spacing: -0.02em;
+        .scan-line {
+            position: absolute;
+            left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #6366f1, #818cf8, #6366f1, transparent);
+            border-radius: 2px;
+            box-shadow: 0 0 20px rgba(99,102,241,.6), 0 0 60px rgba(99,102,241,.3);
+            opacity: 0;
         }
 
-        header p {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-top: 4px;
-        }
-
-        /* ── Status Badge ── */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 100px;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 28px;
-        }
-
-        .status-badge.supported {
-            background: var(--success-bg);
-            color: var(--success);
-            border: 1px solid var(--success-border);
-        }
-
-        .status-badge.partial {
-            background: var(--warning-bg);
-            color: var(--warning);
-            border: 1px solid var(--warning-border);
-        }
-
-        .status-badge.unsupported {
-            background: var(--danger-bg);
-            color: var(--danger);
-            border: 1px solid var(--danger-border);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
+        .fingerprint-glow {
+            position: absolute;
+            inset: -20px;
             border-radius: 50%;
-            flex-shrink: 0;
+            background: radial-gradient(circle, rgba(99,102,241,.15) 0%, transparent 70%);
+            opacity: 0;
         }
 
-        .supported .status-dot { background: var(--success); }
-        .partial .status-dot { background: var(--warning); }
-        .unsupported .status-dot { background: var(--danger); }
+        /* Face ID Animation */
+        .faceid-container { position: relative; width: 140px; height: 140px; }
 
-        /* ── Card ── */
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 28px 24px;
-            margin-bottom: 16px;
-            box-shadow: var(--shadow-sm);
+        .faceid-frame {
+            position: absolute;
+            width: 28px; height: 28px;
+            border-color: #c7d2fe;
+            border-style: solid;
+            border-width: 0;
+            opacity: 0;
+        }
+        .faceid-frame.tl { top:0;left:0; border-top-width:3px; border-left-width:3px; border-radius: 8px 0 0 0; }
+        .faceid-frame.tr { top:0;right:0; border-top-width:3px; border-right-width:3px; border-radius: 0 8px 0 0; }
+        .faceid-frame.bl { bottom:0;left:0; border-bottom-width:3px; border-left-width:3px; border-radius: 0 0 0 8px; }
+        .faceid-frame.br { bottom:0;right:0; border-bottom-width:3px; border-right-width:3px; border-radius: 0 0 8px 0; }
+
+        .faceid-face {
+            position: absolute;
+            inset: 30px;
+            opacity: 0;
         }
 
-        .card-title {
-            font-size: 17px;
-            font-weight: 600;
-            color: var(--text);
-            margin-bottom: 4px;
+        .faceid-scan-line {
+            position: absolute;
+            left: 10px; right: 10px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #6366f1, transparent);
+            box-shadow: 0 0 15px rgba(99,102,241,.5);
+            opacity: 0;
         }
 
-        .card-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 24px;
-            line-height: 1.5;
+        .faceid-glow {
+            position: absolute;
+            inset: -30px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(99,102,241,.12) 0%, transparent 70%);
+            opacity: 0;
         }
 
-        /* ── Tabs ── */
-        .tabs {
-            display: flex;
-            background: var(--bg-subtle);
-            border-radius: var(--radius-sm);
-            padding: 4px;
-            margin-bottom: 20px;
+        /* Particle effects */
+        .particle {
+            position: absolute;
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: #818cf8;
+            pointer-events: none;
         }
 
-        .tab {
-            flex: 1;
-            padding: 10px 16px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            background: transparent;
-            border: none;
-            border-radius: 7px;
-            cursor: pointer;
-            transition: all .2s ease;
-        }
-
-        .tab:hover { color: var(--text); }
-
-        .tab.active {
-            background: var(--card);
-            color: var(--text);
-            box-shadow: var(--shadow-sm);
-        }
-
-        /* ── Panels ── */
-        .panel { display: none; }
-        .panel.active { display: block; }
-
-        /* ── Form ── */
-        .field { margin-bottom: 18px; }
-
-        .field label {
-            display: block;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-        }
-
-        .field input {
-            width: 100%;
-            padding: 11px 14px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xs);
-            color: var(--text);
-            font-family: inherit;
-            font-size: 14px;
-            outline: none;
-            transition: all .2s ease;
-        }
-
-        .field input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79,70,229,.1);
-        }
-
-        .field input::placeholder { color: var(--text-muted); }
-
-        /* ── Buttons ── */
-        .btn {
-            width: 100%;
-            padding: 12px 20px;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            border-radius: var(--radius-xs);
-            cursor: pointer;
-            transition: all .15s ease;
+        /* Success checkmark */
+        .check-circle {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: #ecfdf5;
+            border: 2px solid #a7f3d0;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            opacity: 0;
+            transform: scale(0);
         }
 
-        .btn svg {
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
+        .check-circle svg {
+            width: 28px; height: 28px;
+            stroke: #059669;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 40;
+            stroke-dashoffset: 40;
         }
 
-        .btn-primary {
-            background: var(--primary);
-            color: #fff;
-            box-shadow: 0 1px 2px rgba(79,70,229,.3);
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-light);
-            box-shadow: 0 2px 8px rgba(79,70,229,.35);
-            transform: translateY(-1px);
-        }
-
-        .btn-primary:active { transform: translateY(0); }
-        .btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
-
-        .btn-secondary {
-            background: var(--primary-bg);
-            color: var(--primary);
-            border: 1px solid var(--primary-border);
-        }
-
-        .btn-secondary:hover { background: #e0e7ff; }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-ghost:hover {
-            background: var(--bg-subtle);
-            border-color: #cbd5e1;
-        }
-
-        .btn-danger-outline {
-            background: transparent;
-            color: var(--danger);
-            border: 1px solid var(--danger-border);
-        }
-
-        .btn-danger-outline:hover { background: var(--danger-bg); }
-
-        .btn-sm {
-            width: auto;
-            padding: 7px 14px;
-            font-size: 13px;
-            border-radius: 7px;
-        }
-
-        .btn-icon {
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            border-radius: 8px;
-            flex-shrink: 0;
-        }
-
-        /* ── Divider ── */
-        .divider {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin: 20px 0;
-            color: var(--text-muted);
-            font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-        }
-
-        .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-        }
-
-        /* ── Toast ── */
-        .toast-container {
+        /* Floating gradient orbs */
+        .orb {
             position: fixed;
-            top: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
-            max-width: 400px;
-            padding: 0 16px;
-        }
-
-        .toast {
-            padding: 14px 18px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-weight: 500;
-            animation: toastIn .35s cubic-bezier(.21,1.02,.73,1);
-            box-shadow: var(--shadow-lg);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .toast.success {
-            background: var(--success-bg);
-            color: var(--success);
-            border: 1px solid var(--success-border);
-        }
-
-        .toast.error {
-            background: var(--danger-bg);
-            color: var(--danger);
-            border: 1px solid var(--danger-border);
-        }
-
-        .toast.info {
-            background: var(--primary-bg);
-            color: var(--primary);
-            border: 1px solid var(--primary-border);
-        }
-
-        @keyframes toastIn {
-            from { opacity: 0; transform: translateY(-12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ── Passkey List ── */
-        .passkey-item {
-            display: flex;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid var(--border-light);
-            gap: 14px;
-        }
-
-        .passkey-item:last-child { border-bottom: none; }
-
-        .passkey-icon {
-            width: 42px;
-            height: 42px;
-            background: var(--primary-bg);
-            border-radius: var(--radius-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .passkey-icon svg {
-            width: 20px;
-            height: 20px;
-            stroke: var(--primary);
-            fill: none;
-            stroke-width: 2;
-        }
-
-        .passkey-info { flex: 1; min-width: 0; }
-
-        .passkey-info .name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text);
-        }
-
-        .passkey-info .meta {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        .passkey-actions {
-            display: flex;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-
-        /* ── Profile ── */
-        .profile-section {
-            text-align: center;
-            padding: 32px 24px;
-        }
-
-        .profile-avatar {
-            width: 72px;
-            height: 72px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), #818cf8);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            font-weight: 700;
-            color: #fff;
-            margin-bottom: 14px;
-            box-shadow: 0 4px 14px rgba(79,70,229,.25);
+            filter: blur(80px);
+            opacity: .15;
+            pointer-events: none;
+            z-index: 0;
         }
 
-        .profile-name {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text);
-        }
+        /* Smooth page transitions */
+        .view-enter { opacity: 0; transform: translateY(20px); }
 
-        .profile-email {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
+        /* Input focus animation */
+        input:focus { box-shadow: 0 0 0 4px rgba(99,102,241,.1); }
 
-        /* ── Utilities ── */
-        .hidden { display: none !important; }
+        /* Button press effect */
+        .btn-press:active { transform: scale(.97); }
 
-        .spinner {
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255,255,255,.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin .6s linear infinite;
-        }
+        /* Passkey item hover */
+        .passkey-row:hover { background: #f8fafc; }
+        .passkey-row { transition: background .2s; }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .empty-state {
-            text-align: center;
-            padding: 32px 16px;
-        }
-
-        .empty-state svg {
-            width: 48px;
-            height: 48px;
-            stroke: var(--text-muted);
-            fill: none;
-            stroke-width: 1.5;
-            margin-bottom: 12px;
-        }
-
-        .empty-state p {
-            font-size: 14px;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .section-header h2 {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .footer-text {
-            text-align: center;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 32px;
-        }
-
-        /* ── Responsive ── */
-        @media (max-width: 480px) {
-            .page-wrapper { padding: 16px 12px 40px; }
-            .card { padding: 24px 20px; }
-            header { padding: 28px 0 24px; }
-        }
+        /* Hide scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
     </style>
 </head>
-<body>
+<body class="font-sans bg-slate-50 text-slate-900 min-h-screen antialiased overflow-x-hidden">
 
-<div class="toast-container" id="toasts"></div>
+<!-- Floating Gradient Orbs -->
+<div class="orb w-96 h-96 bg-brand-400 -top-48 -right-48" id="orb1"></div>
+<div class="orb w-80 h-80 bg-purple-400 -bottom-40 -left-40" id="orb2"></div>
+<div class="orb w-64 h-64 bg-blue-400 top-1/2 right-1/4" id="orb3"></div>
 
-<div class="page-wrapper">
-    <div class="container">
-        <header>
-            <div class="logo">
-                <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/><rect x="3" y="10" width="18" height="12" rx="2"/><circle cx="12" cy="16" r="1.5"/></svg>
+<!-- Toast Container -->
+<div class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3 w-full max-w-sm px-4" id="toasts"></div>
+
+<div class="relative z-10 min-h-screen flex flex-col items-center px-4 py-6 sm:py-10">
+    <div class="w-full max-w-md">
+
+        <!-- Header -->
+        <header class="text-center mb-8" id="header">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl shadow-lg shadow-brand-600/30 mb-5">
+                <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/>
+                    <rect x="3" y="10" width="18" height="12" rx="2"/>
+                    <circle cx="12" cy="16" r="1"/>
+                </svg>
             </div>
-            <h1>Passkey Auth</h1>
-            <p>Secure passwordless authentication</p>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">Passkey Auth</h1>
+            <p class="text-slate-400 text-sm mt-1">Secure passwordless authentication</p>
         </header>
 
-        <!-- Status Badge -->
-        <div style="text-align:center;">
-            <div class="status-badge partial" id="supportBadge">
-                <div class="status-dot"></div>
-                <span id="supportText">Checking support...</span>
+        <!-- Support Badge -->
+        <div class="text-center mb-6" id="supportArea">
+            <div id="supportBadge" class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200">
+                <span class="w-2 h-2 rounded-full bg-amber-500" id="supportDot"></span>
+                <span id="supportText">Checking...</span>
             </div>
         </div>
 
-        <!-- LOGGED OUT VIEW -->
+        <!-- ==================== BIOMETRIC ANIMATION SHOWCASE ==================== -->
+        <div class="mb-8" id="bioShowcase">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <!-- Tabs for Face ID / Fingerprint -->
+                <div class="flex border-b border-slate-100">
+                    <button onclick="showBioDemo('fingerprint')" id="bioTabFinger" class="flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600 transition-all">Fingerprint</button>
+                    <button onclick="showBioDemo('faceid')" id="bioTabFace" class="flex-1 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all">Face ID</button>
+                </div>
+
+                <!-- Fingerprint Demo -->
+                <div class="flex flex-col items-center py-10 px-6" id="fingerprintDemo">
+                    <div class="fingerprint-container mb-6" id="fpContainer">
+                        <div class="fingerprint-glow" id="fpGlow"></div>
+                        <svg class="fingerprint-svg" viewBox="0 0 120 150" id="fpSvg">
+                            <!-- Fingerprint ridges -->
+                            <path d="M60 20 C30 20, 15 50, 15 80 C15 110, 30 135, 60 135" id="fp1"/>
+                            <path d="M60 20 C90 20, 105 50, 105 80 C105 110, 90 135, 60 135" id="fp2"/>
+                            <path d="M60 30 C38 30, 25 55, 25 80 C25 105, 38 125, 60 125" id="fp3"/>
+                            <path d="M60 30 C82 30, 95 55, 95 80 C95 105, 82 125, 60 125" id="fp4"/>
+                            <path d="M60 40 C45 40, 35 58, 35 80 C35 102, 45 115, 60 115" id="fp5"/>
+                            <path d="M60 40 C75 40, 85 58, 85 80 C85 102, 75 115, 60 115" id="fp6"/>
+                            <path d="M60 50 C50 50, 45 62, 45 80 C45 98, 50 108, 60 108" id="fp7"/>
+                            <path d="M60 50 C70 50, 75 62, 75 80 C75 98, 70 108, 60 108" id="fp8"/>
+                            <path d="M60 60 C55 60, 52 68, 52 80 C52 92, 55 98, 60 98" id="fp9"/>
+                            <path d="M60 60 C65 60, 68 68, 68 80 C68 92, 65 98, 60 98" id="fp10"/>
+                        </svg>
+                        <div class="scan-line" id="fpScanLine"></div>
+                    </div>
+                    <div class="check-circle" id="fpCheck">
+                        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-4" id="fpStatusText">Tap to scan fingerprint</p>
+                    <button onclick="playFingerprint()" class="mt-4 px-6 py-2 bg-brand-50 text-brand-600 text-sm font-medium rounded-lg hover:bg-brand-100 transition-all btn-press" id="fpPlayBtn">
+                        Play Demo
+                    </button>
+                </div>
+
+                <!-- Face ID Demo -->
+                <div class="flex flex-col items-center py-10 px-6 hidden" id="faceidDemo">
+                    <div class="faceid-container mb-6" id="faceContainer">
+                        <div class="faceid-glow" id="faceGlow"></div>
+                        <div class="faceid-frame tl" id="frameTL"></div>
+                        <div class="faceid-frame tr" id="frameTR"></div>
+                        <div class="faceid-frame bl" id="frameBL"></div>
+                        <div class="faceid-frame br" id="frameBR"></div>
+                        <!-- Face features -->
+                        <svg class="faceid-face" viewBox="0 0 80 80" id="faceSvg">
+                            <!-- Eyes -->
+                            <circle cx="28" cy="28" r="4" fill="none" stroke="#6366f1" stroke-width="2.5" id="eyeL"/>
+                            <circle cx="52" cy="28" r="4" fill="none" stroke="#6366f1" stroke-width="2.5" id="eyeR"/>
+                            <!-- Nose -->
+                            <path d="M40 35 L38 45 L42 45" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="nose"/>
+                            <!-- Mouth -->
+                            <path d="M30 55 Q40 65 50 55" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" id="mouth"/>
+                        </svg>
+                        <div class="faceid-scan-line" id="faceScanLine"></div>
+                    </div>
+                    <div class="check-circle" id="faceCheck">
+                        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-4" id="faceStatusText">Tap to scan face</p>
+                    <button onclick="playFaceId()" class="mt-4 px-6 py-2 bg-brand-50 text-brand-600 text-sm font-medium rounded-lg hover:bg-brand-100 transition-all btn-press" id="facePlayBtn">
+                        Play Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== LOGGED OUT VIEW ==================== -->
         <div id="loggedOutView">
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab('login')">Sign In</button>
-                <button class="tab" onclick="switchTab('register')">Create Account</button>
+            <div class="flex bg-slate-100 rounded-xl p-1 mb-5" id="authTabs">
+                <button class="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-white text-slate-900 shadow-sm transition-all" onclick="switchTab('login')" id="tabLogin">Sign In</button>
+                <button class="flex-1 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:text-slate-600 transition-all" onclick="switchTab('register')" id="tabRegister">Create Account</button>
             </div>
 
-            <!-- LOGIN PANEL -->
+            <!-- Login Panel -->
             <div class="panel active" id="loginPanel">
-                <div class="card">
-                    <div class="card-title">Welcome back</div>
-                    <p class="card-desc">Sign in with your passkey using biometrics or your device PIN.</p>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-7">
+                    <h2 class="text-lg font-semibold">Welcome back</h2>
+                    <p class="text-sm text-slate-400 mb-6">Authenticate with your passkey securely.</p>
 
-                    <div class="field">
-                        <label for="loginEmail">Email address</label>
-                        <input type="email" id="loginEmail" placeholder="name@example.com" autocomplete="email webauthn">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">Email address</label>
+                        <input type="email" id="loginEmail" placeholder="name@example.com" autocomplete="email webauthn"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none transition-all focus:border-brand-500 focus:bg-white">
                     </div>
 
-                    <button class="btn btn-primary" onclick="passkeyLogin()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/><rect x="3" y="10" width="18" height="12" rx="2"/></svg>
+                    <button onclick="passkeyLogin()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-brand-600/20 hover:shadow-lg hover:shadow-brand-600/30 transition-all btn-press flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/><rect x="3" y="10" width="18" height="12" rx="2"/></svg>
                         Sign in with Passkey
                     </button>
 
-                    <div class="divider">or</div>
+                    <div class="flex items-center gap-4 my-5">
+                        <div class="flex-1 h-px bg-slate-100"></div>
+                        <span class="text-xs font-medium text-slate-300 uppercase tracking-wider">or</span>
+                        <div class="flex-1 h-px bg-slate-100"></div>
+                    </div>
 
-                    <button class="btn btn-secondary" onclick="passkeyLogin(true)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    <button onclick="passkeyLogin(true)" class="w-full py-3 bg-brand-50 hover:bg-brand-100 text-brand-600 text-sm font-semibold rounded-xl border border-brand-200 transition-all btn-press flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                         Sign in without email
                     </button>
 
-                    <div class="divider">password</div>
-
-                    <div class="field">
-                        <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" placeholder="Enter your password">
+                    <div class="flex items-center gap-4 my-5">
+                        <div class="flex-1 h-px bg-slate-100"></div>
+                        <span class="text-xs font-medium text-slate-300 uppercase tracking-wider">password</span>
+                        <div class="flex-1 h-px bg-slate-100"></div>
                     </div>
 
-                    <button class="btn btn-ghost" onclick="passwordLogin()">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter your password"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none transition-all focus:border-brand-500 focus:bg-white">
+                    </div>
+
+                    <button onclick="passwordLogin()" class="w-full py-3 bg-white hover:bg-slate-50 text-slate-600 text-sm font-medium rounded-xl border border-slate-200 transition-all btn-press">
                         Sign in with Password
                     </button>
                 </div>
             </div>
 
-            <!-- REGISTER PANEL -->
+            <!-- Register Panel -->
             <div class="panel" id="registerPanel">
-                <div class="card">
-                    <div class="card-title">Create your account</div>
-                    <p class="card-desc">Set up a new account and register a passkey for fast, secure login.</p>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-7">
+                    <h2 class="text-lg font-semibold">Create your account</h2>
+                    <p class="text-sm text-slate-400 mb-6">Set up a passkey for fast, secure access.</p>
 
-                    <div class="field">
-                        <label for="regName">Full name</label>
-                        <input type="text" id="regName" placeholder="John Doe">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">Full name</label>
+                        <input type="text" id="regName" placeholder="John Doe"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none transition-all focus:border-brand-500 focus:bg-white">
                     </div>
 
-                    <div class="field">
-                        <label for="regEmail">Email address</label>
-                        <input type="email" id="regEmail" placeholder="name@example.com">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">Email address</label>
+                        <input type="email" id="regEmail" placeholder="name@example.com"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none transition-all focus:border-brand-500 focus:bg-white">
                     </div>
 
-                    <div class="field">
-                        <label for="regPassword">Password <span style="color:var(--text-muted);font-weight:400;">(optional backup)</span></label>
-                        <input type="password" id="regPassword" placeholder="Leave empty for passkey-only">
+                    <div class="mb-5">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">Password <span class="text-slate-300 font-normal">(optional backup)</span></label>
+                        <input type="password" id="regPassword" placeholder="Leave empty for passkey-only"
+                            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none transition-all focus:border-brand-500 focus:bg-white">
                     </div>
 
-                    <button class="btn btn-primary" onclick="registerAccount()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                    <button onclick="registerAccount()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-brand-600/20 hover:shadow-lg hover:shadow-brand-600/30 transition-all btn-press flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                         Create Account
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- PASSKEY SETUP -->
+        <!-- ==================== PASSKEY SETUP ==================== -->
         <div id="passkeySetupView" class="hidden">
-            <div class="card">
-                <div class="card-title">Set up your passkey</div>
-                <p class="card-desc">Your account is created! Now register a passkey. Your device will prompt for biometric or PIN verification.</p>
-
-                <div class="field">
-                    <label for="deviceName">Device name</label>
-                    <input type="text" id="deviceName" placeholder="e.g. My iPhone, Work Laptop">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-7">
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-14 h-14 bg-green-50 rounded-2xl mb-4">
+                        <svg class="w-7 h-7 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h2 class="text-lg font-semibold">Account created!</h2>
+                    <p class="text-sm text-slate-400 mt-1">Now set up a passkey for secure login.</p>
                 </div>
 
-                <button class="btn btn-primary" onclick="registerPasskey()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/><rect x="3" y="10" width="18" height="12" rx="2"/></svg>
+                <div class="mb-5">
+                    <label class="block text-xs font-medium text-slate-500 mb-1.5">Device name</label>
+                    <input type="text" id="deviceName" placeholder="e.g. My iPhone, Work Laptop"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none transition-all focus:border-brand-500 focus:bg-white">
+                </div>
+
+                <button onclick="registerPasskey()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-brand-600/20 transition-all btn-press flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/><rect x="3" y="10" width="18" height="12" rx="2"/></svg>
                     Register Passkey
                 </button>
 
-                <div style="margin-top: 12px;">
-                    <button class="btn btn-ghost" onclick="skipPasskeySetup()">
-                        Skip for now
-                    </button>
-                </div>
+                <button onclick="skipPasskeySetup()" class="w-full py-3 mt-3 bg-white hover:bg-slate-50 text-slate-500 text-sm font-medium rounded-xl border border-slate-200 transition-all btn-press">
+                    Skip for now
+                </button>
             </div>
         </div>
 
-        <!-- LOGGED IN VIEW -->
+        <!-- ==================== LOGGED IN VIEW ==================== -->
         <div id="loggedInView" class="hidden">
-            <div class="card">
-                <div class="profile-section">
-                    <div class="profile-avatar" id="profileAvatar">A</div>
-                    <div class="profile-name" id="profileName">User</div>
-                    <div class="profile-email" id="profileEmail">user@example.com</div>
+            <!-- Profile Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+                <div class="bg-gradient-to-br from-brand-600 to-brand-800 px-6 py-8 text-center">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full text-3xl font-bold text-white mb-3 backdrop-blur-sm" id="profileAvatar">A</div>
+                    <div class="text-xl font-bold text-white" id="profileName">User</div>
+                    <div class="text-brand-200 text-sm mt-1" id="profileEmail">user@example.com</div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="section-header">
-                    <h2>Your Passkeys</h2>
-                    <button class="btn btn-primary btn-sm" onclick="addPasskey()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <!-- Passkeys Card -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-semibold">Your Passkeys</h2>
+                    <button onclick="addPasskey()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all btn-press flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Add
                     </button>
                 </div>
                 <div id="passkeyList">
-                    <div class="empty-state">
-                        <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="10" width="18" height="12" rx="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        <p>Loading passkeys...</p>
+                    <div class="text-center py-8">
+                        <svg class="w-12 h-12 mx-auto text-slate-200 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/><rect x="3" y="10" width="18" height="12" rx="2"/></svg>
+                        <p class="text-sm text-slate-400">Loading...</p>
                     </div>
                 </div>
             </div>
 
-            <button class="btn btn-danger-outline" onclick="logout()" style="margin-top: 4px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <!-- Sign Out -->
+            <button onclick="logout()" class="w-full py-3 bg-white hover:bg-red-50 text-red-500 text-sm font-medium rounded-xl border border-red-200 hover:border-red-300 transition-all btn-press flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 Sign Out
             </button>
 
-            <p class="footer-text">Secured with WebAuthn / FIDO2</p>
+            <p class="text-center text-xs text-slate-300 mt-6">Secured with WebAuthn / FIDO2</p>
         </div>
     </div>
 </div>
 
 <script>
+// ─── GSAP Animations ───
+
+// Animate floating orbs
+gsap.to('#orb1', { x: 30, y: 20, duration: 8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+gsap.to('#orb2', { x: -20, y: -30, duration: 10, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+gsap.to('#orb3', { x: 40, y: -20, duration: 12, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+
+// Header entrance
+gsap.from('#header', { opacity: 0, y: -30, duration: .8, ease: 'power3.out' });
+gsap.from('#supportArea', { opacity: 0, y: -15, duration: .6, delay: .3, ease: 'power3.out' });
+gsap.from('#bioShowcase', { opacity: 0, y: 20, duration: .7, delay: .5, ease: 'power3.out' });
+gsap.from('#authTabs', { opacity: 0, y: 15, duration: .6, delay: .7, ease: 'power3.out' });
+gsap.from('.panel.active .bg-white', { opacity: 0, y: 20, duration: .7, delay: .8, ease: 'power3.out' });
+
+// ─── Biometric Demo Animations ───
+
+function showBioDemo(type) {
+    const fpDemo = document.getElementById('fingerprintDemo');
+    const faceDemo = document.getElementById('faceidDemo');
+    const tabFinger = document.getElementById('bioTabFinger');
+    const tabFace = document.getElementById('bioTabFace');
+
+    if (type === 'fingerprint') {
+        fpDemo.classList.remove('hidden');
+        faceDemo.classList.add('hidden');
+        tabFinger.className = 'flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600 transition-all';
+        tabFace.className = 'flex-1 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all';
+        gsap.from(fpDemo, { opacity: 0, x: -20, duration: .4, ease: 'power2.out' });
+    } else {
+        faceDemo.classList.remove('hidden');
+        fpDemo.classList.add('hidden');
+        tabFace.className = 'flex-1 py-3 text-sm font-medium text-brand-600 border-b-2 border-brand-600 transition-all';
+        tabFinger.className = 'flex-1 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all';
+        gsap.from(faceDemo, { opacity: 0, x: 20, duration: .4, ease: 'power2.out' });
+    }
+}
+
+function playFingerprint() {
+    const tl = gsap.timeline();
+    const statusText = document.getElementById('fpStatusText');
+    const checkEl = document.getElementById('fpCheck');
+
+    // Reset
+    gsap.set('#fpCheck', { opacity: 0, scale: 0 });
+    gsap.set('#fpCheck svg', { strokeDashoffset: 40 });
+    gsap.set('.fingerprint-svg path', { stroke: '#c7d2fe', strokeDashoffset: 300 });
+
+    statusText.textContent = 'Scanning...';
+
+    // Draw fingerprint lines
+    tl.to('.fingerprint-svg path', {
+        strokeDashoffset: 0,
+        duration: .4,
+        stagger: .08,
+        ease: 'power2.out'
+    })
+    // Scan line sweep
+    .to('#fpScanLine', { opacity: 1, duration: .1 }, '-=.3')
+    .fromTo('#fpScanLine', { top: 0 }, { top: '100%', duration: 1.2, ease: 'power1.inOut' })
+    .to('.fingerprint-svg path', {
+        stroke: '#6366f1',
+        duration: .3,
+        stagger: .05,
+    }, '-=.8')
+    // Glow
+    .to('#fpGlow', { opacity: 1, duration: .4 }, '-=.6')
+    .to('#fpScanLine', { opacity: 0, duration: .2 })
+    // Pulse
+    .to('#fpGlow', { scale: 1.3, opacity: 0, duration: .6, ease: 'power2.out' })
+    .call(() => { statusText.textContent = 'Verified!'; })
+    // Show checkmark
+    .to('#fpCheck', { opacity: 1, scale: 1, duration: .4, ease: 'back.out(2)' })
+    .to('#fpCheck svg', { strokeDashoffset: 0, duration: .4, ease: 'power2.out' })
+    // Create particles
+    .call(() => createParticles(document.getElementById('fpContainer'), 8))
+    .to({}, { duration: 2 })
+    .call(() => {
+        statusText.textContent = 'Tap to scan fingerprint';
+        gsap.to('#fpCheck', { opacity: 0, scale: 0, duration: .3 });
+        gsap.to('.fingerprint-svg path', { strokeDashoffset: 300, stroke: '#c7d2fe', duration: .5 });
+    });
+}
+
+function playFaceId() {
+    const tl = gsap.timeline();
+    const statusText = document.getElementById('faceStatusText');
+
+    // Reset
+    gsap.set('#faceCheck', { opacity: 0, scale: 0 });
+    gsap.set('#faceCheck svg', { strokeDashoffset: 40 });
+    gsap.set('.faceid-face', { opacity: 0 });
+    gsap.set('.faceid-frame', { opacity: 0 });
+
+    statusText.textContent = 'Detecting face...';
+
+    // Show frame corners
+    tl.to('.faceid-frame', { opacity: 1, duration: .3, stagger: .08, ease: 'power2.out' })
+    // Animate frames inward (focus)
+    .to('.faceid-frame', { borderColor: '#6366f1', duration: .3 })
+    // Show face
+    .to('.faceid-face', { opacity: 1, duration: .5, ease: 'power2.out' })
+    // Scan line
+    .to('#faceScanLine', { opacity: 1, duration: .1 })
+    .fromTo('#faceScanLine', { top: '10px' }, { top: '130px', duration: 1, ease: 'power1.inOut' })
+    // Glow
+    .to('#faceGlow', { opacity: 1, duration: .3 }, '-=.5')
+    .to('#faceScanLine', { opacity: 0, duration: .2 })
+    .call(() => { statusText.textContent = 'Face recognized!'; })
+    // Flash frames green
+    .to('.faceid-frame', { borderColor: '#22c55e', duration: .3 })
+    .to('#faceGlow', { scale: 1.3, opacity: 0, duration: .5, ease: 'power2.out' })
+    // Checkmark
+    .to('#faceCheck', { opacity: 1, scale: 1, duration: .4, ease: 'back.out(2)' })
+    .to('#faceCheck svg', { strokeDashoffset: 0, duration: .4, ease: 'power2.out' })
+    .call(() => createParticles(document.getElementById('faceContainer'), 8))
+    .to({}, { duration: 2 })
+    .call(() => {
+        statusText.textContent = 'Tap to scan face';
+        gsap.to('#faceCheck', { opacity: 0, scale: 0, duration: .3 });
+        gsap.to('.faceid-face', { opacity: 0, duration: .3 });
+        gsap.to('.faceid-frame', { opacity: 0, borderColor: '#c7d2fe', duration: .3 });
+    });
+}
+
+function createParticles(container, count) {
+    for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const angle = (Math.PI * 2 / count) * i;
+        const x = container.offsetWidth / 2;
+        const y = container.offsetHeight / 2;
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        container.appendChild(p);
+
+        gsap.to(p, {
+            x: Math.cos(angle) * (40 + Math.random() * 30),
+            y: Math.sin(angle) * (40 + Math.random() * 30),
+            opacity: 0,
+            scale: 0,
+            duration: .8 + Math.random() * .4,
+            ease: 'power2.out',
+            onComplete: () => p.remove()
+        });
+    }
+}
+
+// ─── API Logic ───
+
 const API = window.location.origin + '/api';
 let authToken = localStorage.getItem('auth_token');
 let currentUser = null;
@@ -691,8 +567,7 @@ let newUserId = null;
 
 function base64urlToBuffer(b64) {
     const base64 = b64.replace(/-/g, '+').replace(/_/g, '/');
-    const pad = (4 - (base64.length % 4)) % 4;
-    const binary = atob(base64 + '='.repeat(pad));
+    const binary = atob(base64 + '='.repeat((4 - base64.length % 4) % 4));
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return bytes.buffer;
@@ -700,67 +575,92 @@ function base64urlToBuffer(b64) {
 
 function bufferToBase64url(buf) {
     const bytes = new Uint8Array(buf);
-    let binary = '';
-    for (const b of bytes) binary += String.fromCharCode(b);
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    let s = '';
+    for (const b of bytes) s += String.fromCharCode(b);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 async function api(method, path, body = null, auth = false) {
-    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-    if (auth && authToken) headers['Authorization'] = 'Bearer ' + authToken;
-    const opts = { method, headers };
+    const h = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    if (auth && authToken) h['Authorization'] = 'Bearer ' + authToken;
+    const opts = { method, headers: h };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(API + path, opts);
-    return await res.json();
+    return (await fetch(API + path, opts)).json();
 }
 
 function toast(msg, type = 'info') {
+    const colors = {
+        success: 'bg-green-50 text-green-700 border border-green-200',
+        error: 'bg-red-50 text-red-700 border border-red-200',
+        info: 'bg-brand-50 text-brand-700 border border-brand-200'
+    };
     const icons = {
-        success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>',
-        error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-        info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+        success: '<svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+        error: '<svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+        info: '<svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
     };
     const el = document.createElement('div');
-    el.className = 'toast ' + type;
-    el.innerHTML = (icons[type] || '') + '<span>' + msg + '</span>';
+    el.className = `flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-medium shadow-lg ${colors[type] || colors.info}`;
+    el.innerHTML = (icons[type] || '') + `<span>${msg}</span>`;
     document.getElementById('toasts').appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3500);
+    gsap.from(el, { opacity: 0, y: -10, scale: .95, duration: .35, ease: 'back.out(1.5)' });
+    setTimeout(() => gsap.to(el, { opacity: 0, y: -10, duration: .3, onComplete: () => el.remove() }), 3500);
 }
 
 function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t, i) => {
-        t.classList.toggle('active', (tab === 'login' ? i === 0 : i === 1));
-    });
-    document.getElementById('loginPanel').classList.toggle('active', tab === 'login');
-    document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+    const tl = document.getElementById('tabLogin');
+    const tr = document.getElementById('tabRegister');
+    if (tab === 'login') {
+        tl.className = 'flex-1 py-2.5 text-sm font-semibold rounded-lg bg-white text-slate-900 shadow-sm transition-all';
+        tr.className = 'flex-1 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:text-slate-600 transition-all';
+    } else {
+        tr.className = 'flex-1 py-2.5 text-sm font-semibold rounded-lg bg-white text-slate-900 shadow-sm transition-all';
+        tl.className = 'flex-1 py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:text-slate-600 transition-all';
+    }
+    const lp = document.getElementById('loginPanel');
+    const rp = document.getElementById('registerPanel');
+    lp.classList.toggle('active', tab === 'login');
+    rp.classList.toggle('active', tab === 'register');
+    gsap.from('.panel.active', { opacity: 0, y: 15, duration: .4, ease: 'power2.out' });
 }
 
 function showView(view) {
-    document.getElementById('loggedOutView').classList.toggle('hidden', view !== 'loggedOut');
-    document.getElementById('passkeySetupView').classList.toggle('hidden', view !== 'passkeySetup');
-    document.getElementById('loggedInView').classList.toggle('hidden', view !== 'loggedIn');
+    ['loggedOutView','passkeySetupView','loggedInView'].forEach(id => {
+        const el = document.getElementById(id);
+        const show = id === view + 'View' || (view === 'loggedOut' && id === 'loggedOutView') ||
+                     (view === 'passkeySetup' && id === 'passkeySetupView') ||
+                     (view === 'loggedIn' && id === 'loggedInView');
+        el.classList.toggle('hidden', !show);
+        if (show) gsap.from(el, { opacity: 0, y: 25, duration: .5, ease: 'power3.out' });
+    });
+    // Hide bio showcase when logged in
+    document.getElementById('bioShowcase').classList.toggle('hidden', view === 'loggedIn');
 }
 
 async function checkSupport() {
     const badge = document.getElementById('supportBadge');
+    const dot = document.getElementById('supportDot');
     const text = document.getElementById('supportText');
 
     if (typeof window.PublicKeyCredential === 'undefined') {
-        badge.className = 'status-badge unsupported';
+        badge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-red-50 text-red-600 border border-red-200';
+        dot.className = 'w-2 h-2 rounded-full bg-red-500';
         text.textContent = 'Passkeys not supported';
         return;
     }
-
     let platform = false;
     try { platform = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); } catch(e) {}
 
     if (platform) {
-        badge.className = 'status-badge supported';
+        badge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-200';
+        dot.className = 'w-2 h-2 rounded-full bg-green-500';
         text.textContent = 'Passkeys ready';
     } else {
-        badge.className = 'status-badge partial';
+        badge.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500';
         text.textContent = 'Partial passkey support';
     }
+    gsap.from(badge, { scale: .8, opacity: 0, duration: .5, ease: 'back.out(2)' });
 }
 
 async function registerAccount() {
@@ -768,16 +668,11 @@ async function registerAccount() {
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
     if (!name || !email) return toast('Name and email are required.', 'error');
-
     const body = { name, email };
     if (password) { body.password = password; body.password_confirmation = password; }
-
     const res = await api('POST', '/auth/register', body);
-    if (!res.success) {
-        return toast(res.errors ? Object.values(res.errors).flat().join(' ') : res.message, 'error');
-    }
-
-    toast('Account created! Set up your passkey.', 'success');
+    if (!res.success) return toast(res.errors ? Object.values(res.errors).flat().join(' ') : res.message, 'error');
+    toast('Account created!', 'success');
     newUserId = res.data.user.id;
     currentUser = res.data.user;
     document.getElementById('deviceName').value = '';
@@ -786,53 +681,31 @@ async function registerAccount() {
 
 async function registerPasskey(isAdd = false) {
     const userId = isAdd ? currentUser.id : newUserId;
-    const deviceName = isAdd
-        ? prompt('Name this passkey (e.g. My Phone):')
-        : document.getElementById('deviceName').value.trim();
+    const deviceName = isAdd ? prompt('Name this passkey (e.g. My Phone):') : document.getElementById('deviceName').value.trim();
     if (!deviceName) return toast('Please provide a device name.', 'error');
-
     try {
         const optPath = isAdd ? '/auth/passkeys/add/options' : '/auth/passkey/register/options';
-        const optBody = isAdd ? {} : { user_id: userId };
-        const optRes = await api('POST', optPath, optBody, isAdd);
+        const optRes = await api('POST', optPath, isAdd ? {} : { user_id: userId }, isAdd);
         if (!optRes.success) return toast(optRes.message, 'error');
-
-        const publicKey = optRes.data.publicKey;
-        publicKey.challenge = base64urlToBuffer(publicKey.challenge);
-        publicKey.user.id = new TextEncoder().encode(publicKey.user.id);
-        if (publicKey.excludeCredentials) {
-            publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({ ...c, id: base64urlToBuffer(c.id) }));
-        }
-
-        toast('Complete the verification on your device...', 'info');
-        const credential = await navigator.credentials.create({ publicKey });
-
-        const body = {
-            id: credential.id,
-            rawId: bufferToBase64url(credential.rawId),
-            type: credential.type,
-            response: {
-                clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
-                attestationObject: bufferToBase64url(credential.response.attestationObject),
-                transports: credential.response.getTransports?.() || [],
-            },
-            authenticatorAttachment: credential.authenticatorAttachment || undefined,
-            device_name: deviceName,
-        };
-        if (credential.response.getPublicKey) body.response.publicKey = bufferToBase64url(credential.response.getPublicKey());
-        if (credential.response.getAuthenticatorData) body.response.authenticatorData = bufferToBase64url(credential.response.getAuthenticatorData());
+        const pk = optRes.data.publicKey;
+        pk.challenge = base64urlToBuffer(pk.challenge);
+        pk.user.id = new TextEncoder().encode(pk.user.id);
+        if (pk.excludeCredentials) pk.excludeCredentials = pk.excludeCredentials.map(c => ({ ...c, id: base64urlToBuffer(c.id) }));
+        toast('Complete verification on your device...', 'info');
+        const cred = await navigator.credentials.create({ publicKey: pk });
+        const body = { id: cred.id, rawId: bufferToBase64url(cred.rawId), type: cred.type,
+            response: { clientDataJSON: bufferToBase64url(cred.response.clientDataJSON), attestationObject: bufferToBase64url(cred.response.attestationObject), transports: cred.response.getTransports?.() || [] },
+            authenticatorAttachment: cred.authenticatorAttachment || undefined, device_name: deviceName };
+        if (cred.response.getPublicKey) body.response.publicKey = bufferToBase64url(cred.response.getPublicKey());
+        if (cred.response.getAuthenticatorData) body.response.authenticatorData = bufferToBase64url(cred.response.getAuthenticatorData());
         if (!isAdd) body.user_id = userId;
-
-        const verifyPath = isAdd ? '/auth/passkeys/add/verify' : '/auth/passkey/register/verify';
-        const verifyRes = await api('POST', verifyPath, body, isAdd);
-        if (!verifyRes.success) return toast(verifyRes.message, 'error');
-
+        const vRes = await api('POST', isAdd ? '/auth/passkeys/add/verify' : '/auth/passkey/register/verify', body, isAdd);
+        if (!vRes.success) return toast(vRes.message, 'error');
         toast('Passkey registered!', 'success');
-        if (verifyRes.data.token) { authToken = verifyRes.data.token; localStorage.setItem('auth_token', authToken); }
+        if (vRes.data.token) { authToken = vRes.data.token; localStorage.setItem('auth_token', authToken); }
         if (isAdd) { loadPasskeys(); } else { await loadProfile(); showView('loggedIn'); loadPasskeys(); }
     } catch (err) {
-        if (err.name === 'NotAllowedError') toast('Registration cancelled.', 'error');
-        else { toast('Error: ' + err.message, 'error'); console.error(err); }
+        toast(err.name === 'NotAllowedError' ? 'Registration cancelled.' : 'Error: ' + err.message, 'error');
     }
 }
 
@@ -844,53 +717,32 @@ async function passkeyLogin(discoverable = false) {
     try {
         const optRes = await api('POST', '/auth/passkey/login/options', { email: email || undefined });
         if (!optRes.success) return toast(optRes.message, 'error');
-
-        const publicKey = optRes.data.publicKey;
-        publicKey.challenge = base64urlToBuffer(publicKey.challenge);
-        if (publicKey.allowCredentials) {
-            publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({ ...c, id: base64urlToBuffer(c.id) }));
-        }
-
-        toast('Complete the verification on your device...', 'info');
-        const assertion = await navigator.credentials.get({ publicKey });
-
-        const body = {
-            id: assertion.id,
-            rawId: bufferToBase64url(assertion.rawId),
-            type: assertion.type,
-            response: {
-                clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
-                authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
-                signature: bufferToBase64url(assertion.response.signature),
-                userHandle: assertion.response.userHandle ? bufferToBase64url(assertion.response.userHandle) : null,
-            },
-            authenticatorAttachment: assertion.authenticatorAttachment || undefined,
-        };
-
-        const verifyRes = await api('POST', '/auth/passkey/login/verify', body);
-        if (!verifyRes.success) return toast(verifyRes.message, 'error');
-
-        authToken = verifyRes.data.token;
-        localStorage.setItem('auth_token', authToken);
-        currentUser = verifyRes.data.user;
+        const pk = optRes.data.publicKey;
+        pk.challenge = base64urlToBuffer(pk.challenge);
+        if (pk.allowCredentials) pk.allowCredentials = pk.allowCredentials.map(c => ({ ...c, id: base64urlToBuffer(c.id) }));
+        toast('Complete verification on your device...', 'info');
+        const a = await navigator.credentials.get({ publicKey: pk });
+        const body = { id: a.id, rawId: bufferToBase64url(a.rawId), type: a.type,
+            response: { clientDataJSON: bufferToBase64url(a.response.clientDataJSON), authenticatorData: bufferToBase64url(a.response.authenticatorData),
+                signature: bufferToBase64url(a.response.signature), userHandle: a.response.userHandle ? bufferToBase64url(a.response.userHandle) : null },
+            authenticatorAttachment: a.authenticatorAttachment || undefined };
+        const vRes = await api('POST', '/auth/passkey/login/verify', body);
+        if (!vRes.success) return toast(vRes.message, 'error');
+        authToken = vRes.data.token; localStorage.setItem('auth_token', authToken); currentUser = vRes.data.user;
         toast('Welcome back, ' + currentUser.name + '!', 'success');
         showProfile(); showView('loggedIn'); loadPasskeys();
     } catch (err) {
-        if (err.name === 'NotAllowedError') toast('Authentication cancelled.', 'error');
-        else { toast('Error: ' + err.message, 'error'); console.error(err); }
+        toast(err.name === 'NotAllowedError' ? 'Authentication cancelled.' : 'Error: ' + err.message, 'error');
     }
 }
 
 async function passwordLogin() {
     const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    if (!email || !password) return toast('Email and password are required.', 'error');
-
-    const res = await api('POST', '/auth/login/password', { email, password });
+    const pw = document.getElementById('loginPassword').value;
+    if (!email || !pw) return toast('Email and password are required.', 'error');
+    const res = await api('POST', '/auth/login/password', { email, password: pw });
     if (!res.success) return toast(res.message, 'error');
-
-    authToken = res.data.token; localStorage.setItem('auth_token', authToken);
-    currentUser = res.data.user;
+    authToken = res.data.token; localStorage.setItem('auth_token', authToken); currentUser = res.data.user;
     toast('Welcome back, ' + currentUser.name + '!', 'success');
     showProfile(); showView('loggedIn'); loadPasskeys();
 }
@@ -909,65 +761,57 @@ function showProfile() {
 
 async function loadPasskeys() {
     const res = await api('GET', '/auth/passkeys', null, true);
-    const container = document.getElementById('passkeyList');
-
+    const c = document.getElementById('passkeyList');
     if (!res.success || !res.data.passkeys.length) {
-        container.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="10" width="18" height="12" rx="2" stroke-linecap="round" stroke-linejoin="round"/></svg><p>No passkeys yet.<br>Add one for passwordless login.</p></div>';
+        c.innerHTML = '<div class="text-center py-8"><svg class="w-12 h-12 mx-auto text-slate-200 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z" stroke-linecap="round"/><rect x="3" y="10" width="18" height="12" rx="2"/></svg><p class="text-sm text-slate-400">No passkeys yet. Add one!</p></div>';
         return;
     }
-
-    container.innerHTML = res.data.passkeys.map(pk => `
-        <div class="passkey-item">
-            <div class="passkey-icon">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/><rect x="3" y="10" width="18" height="12" rx="2"/></svg>
+    c.innerHTML = res.data.passkeys.map(pk => `
+        <div class="passkey-row flex items-center gap-3 py-3.5 px-2 -mx-2 rounded-xl cursor-default">
+            <div class="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a5 5 0 0 1 5 5v3H7V7a5 5 0 0 1 5-5z"/><rect x="3" y="10" width="18" height="12" rx="2"/></svg>
             </div>
-            <div class="passkey-info">
-                <div class="name">${pk.device_name || 'Unnamed Passkey'}</div>
-                <div class="meta">
-                    Added ${new Date(pk.created_at).toLocaleDateString()}${pk.last_used_at ? ' &middot; Used ' + new Date(pk.last_used_at).toLocaleDateString() : ''}${pk.backup_eligible ? ' &middot; Synced' : ''}
-                </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-slate-800 truncate">${pk.device_name || 'Unnamed'}</div>
+                <div class="text-xs text-slate-400 mt-0.5">Added ${new Date(pk.created_at).toLocaleDateString()}${pk.last_used_at ? ' &middot; Used ' + new Date(pk.last_used_at).toLocaleDateString() : ''}</div>
             </div>
-            <div class="passkey-actions">
-                <button class="btn btn-ghost btn-icon" onclick="renamePasskey(${pk.id}, '${(pk.device_name || '').replace(/'/g, "\\'")}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <div class="flex gap-1.5 flex-shrink-0">
+                <button onclick="renamePasskey(${pk.id}, '${(pk.device_name||'').replace(/'/g,"\\'")}')" class="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center transition-all">
+                    <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
-                <button class="btn btn-danger-outline btn-icon" onclick="deletePasskey(${pk.id})">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <button onclick="deletePasskey(${pk.id})" class="w-8 h-8 rounded-lg border border-red-200 hover:bg-red-50 flex items-center justify-center transition-all">
+                    <svg class="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
             </div>
-        </div>
-    `).join('');
+        </div>`).join('');
+    gsap.from('.passkey-row', { opacity: 0, x: -15, duration: .3, stagger: .08, ease: 'power2.out' });
 }
 
-async function renamePasskey(id, currentName) {
-    const name = prompt('New name:', currentName);
-    if (!name) return;
-    const res = await api('PATCH', '/auth/passkeys/' + id, { device_name: name }, true);
-    if (res.success) { toast('Passkey renamed.', 'success'); loadPasskeys(); }
-    else toast(res.message, 'error');
+async function renamePasskey(id, name) {
+    const n = prompt('New name:', name);
+    if (!n) return;
+    const r = await api('PATCH', '/auth/passkeys/' + id, { device_name: n }, true);
+    r.success ? (toast('Renamed!', 'success'), loadPasskeys()) : toast(r.message, 'error');
 }
 
 async function deletePasskey(id) {
-    if (!confirm('Delete this passkey? This cannot be undone.')) return;
-    const res = await api('DELETE', '/auth/passkeys/' + id, null, true);
-    if (res.success) { toast('Passkey deleted.', 'success'); loadPasskeys(); }
-    else toast(res.message, 'error');
+    if (!confirm('Delete this passkey?')) return;
+    const r = await api('DELETE', '/auth/passkeys/' + id, null, true);
+    r.success ? (toast('Deleted.', 'success'), loadPasskeys()) : toast(r.message, 'error');
 }
 
 async function logout() {
     await api('POST', '/auth/logout', null, true);
-    authToken = null; currentUser = null;
-    localStorage.removeItem('auth_token');
-    toast('Signed out.', 'success');
-    showView('loggedOut');
+    authToken = null; currentUser = null; localStorage.removeItem('auth_token');
+    toast('Signed out.', 'success'); showView('loggedOut');
 }
 
 async function init() {
     checkSupport();
     if (authToken) {
-        const res = await api('GET', '/auth/me', null, true);
-        if (res.success) { currentUser = res.data.user; showProfile(); showView('loggedIn'); loadPasskeys(); return; }
-        else { authToken = null; localStorage.removeItem('auth_token'); }
+        const r = await api('GET', '/auth/me', null, true);
+        if (r.success) { currentUser = r.data.user; showProfile(); showView('loggedIn'); loadPasskeys(); return; }
+        authToken = null; localStorage.removeItem('auth_token');
     }
     showView('loggedOut');
 }
