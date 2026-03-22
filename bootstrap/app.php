@@ -78,14 +78,35 @@ $app = Application::configure(basePath: dirname(__DIR__))
 // Vercel serverless: use /tmp for writable paths since the filesystem is read-only.
 if (isset($_ENV['VERCEL']) || getenv('VERCEL')) {
     $app->useStoragePath('/tmp/storage');
-    if (!is_dir('/tmp/storage/framework/views')) {
-        @mkdir('/tmp/storage/framework/views', 0755, true);
+
+    // Create required directories
+    foreach ([
+        '/tmp/storage/framework/views',
+        '/tmp/storage/framework/cache',
+        '/tmp/storage/framework/sessions',
+        '/tmp/storage/logs',
+        '/tmp/database',
+    ] as $dir) {
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
     }
-    if (!is_dir('/tmp/storage/framework/cache')) {
-        @mkdir('/tmp/storage/framework/cache', 0755, true);
-    }
-    if (!is_dir('/tmp/storage/logs')) {
-        @mkdir('/tmp/storage/logs', 0755, true);
+
+    // Auto-create SQLite database and run migrations on each cold start.
+    // This makes the demo work without an external database.
+    // Data resets on each cold start — this is expected for a demo.
+    $dbPath = '/tmp/database/database.sqlite';
+    if (!file_exists($dbPath)) {
+        touch($dbPath);
+        // Run migrations after Laravel boots
+        $app->booted(function () {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            } catch (\Throwable $e) {
+                // Silently fail — log if possible
+                \Illuminate\Support\Facades\Log::error('Auto-migration failed: ' . $e->getMessage());
+            }
+        });
     }
 }
 
