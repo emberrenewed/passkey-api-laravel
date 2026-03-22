@@ -166,6 +166,114 @@
             animation: spin .6s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Biometric Overlay ── */
+        .bio-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5,5,20,.85);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+        }
+        .bio-overlay.active { display: flex; }
+
+        /* Fingerprint */
+        .fp-wrap { position: relative; width: 140px; height: 170px; }
+        .fp-wrap svg path {
+            fill: none;
+            stroke: rgba(139,92,246,.25);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-dasharray: 300;
+            stroke-dashoffset: 0;
+        }
+        .fp-scan {
+            position: absolute;
+            left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #8b5cf6, #06b6d4, #8b5cf6, transparent);
+            border-radius: 2px;
+            box-shadow: 0 0 25px rgba(139,92,246,.6), 0 0 60px rgba(6,182,212,.3);
+            opacity: 0;
+            top: 0;
+        }
+        .fp-glow {
+            position: absolute;
+            inset: -30px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(139,92,246,.2) 0%, transparent 70%);
+            opacity: 0;
+        }
+
+        /* Face ID */
+        .face-wrap { position: relative; width: 160px; height: 160px; }
+        .face-corner {
+            position: absolute;
+            width: 32px; height: 32px;
+            border-style: solid;
+            border-color: rgba(139,92,246,.3);
+            border-width: 0;
+            opacity: 0;
+        }
+        .face-corner.tl { top:0;left:0; border-top-width:3px; border-left-width:3px; border-radius:10px 0 0 0; }
+        .face-corner.tr { top:0;right:0; border-top-width:3px; border-right-width:3px; border-radius:0 10px 0 0; }
+        .face-corner.bl { bottom:0;left:0; border-bottom-width:3px; border-left-width:3px; border-radius:0 0 0 10px; }
+        .face-corner.br { bottom:0;right:0; border-bottom-width:3px; border-right-width:3px; border-radius:0 0 10px 0; }
+        .face-features {
+            position: absolute;
+            inset: 35px;
+            opacity: 0;
+        }
+        .face-scan {
+            position: absolute;
+            left: 12px; right: 12px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #8b5cf6, #06b6d4, #8b5cf6, transparent);
+            box-shadow: 0 0 20px rgba(139,92,246,.5);
+            opacity: 0;
+            top: 0;
+        }
+        .face-glow {
+            position: absolute;
+            inset: -40px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(6,182,212,.15) 0%, transparent 70%);
+            opacity: 0;
+        }
+
+        /* Success check in overlay */
+        .bio-check {
+            position: absolute;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: rgba(16,185,129,.1);
+            border: 2px solid rgba(16,185,129,.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0);
+        }
+        .bio-check svg {
+            width: 36px; height: 36px;
+            stroke: #10b981;
+            stroke-width: 2.5;
+            fill: none;
+            stroke-dasharray: 50;
+            stroke-dashoffset: 50;
+        }
+
+        /* Overlay particles */
+        .bio-particle {
+            position: absolute;
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="font-sans text-white min-h-screen antialiased overflow-x-hidden">
@@ -185,6 +293,64 @@
 
 <!-- Toast -->
 <div class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3 w-full max-w-sm px-4" id="toasts"></div>
+
+<!-- Biometric Verification Overlay -->
+<div class="bio-overlay" id="bioOverlay">
+    <div class="flex flex-col items-center">
+        <!-- Fingerprint Animation -->
+        <div id="bioFingerprint" class="flex flex-col items-center">
+            <div class="fp-wrap" id="fpWrap">
+                <div class="fp-glow" id="fpGlow2"></div>
+                <svg viewBox="0 0 140 170" class="w-[140px] h-[170px]">
+                    <path d="M70 15 C35 15, 15 50, 15 90 C15 130, 35 155, 70 155" id="fpl1"/>
+                    <path d="M70 15 C105 15, 125 50, 125 90 C125 130, 105 155, 70 155" id="fpl2"/>
+                    <path d="M70 28 C42 28, 28 55, 28 90 C28 125, 42 145, 70 145" id="fpl3"/>
+                    <path d="M70 28 C98 28, 112 55, 112 90 C112 125, 98 145, 70 145" id="fpl4"/>
+                    <path d="M70 40 C50 40, 40 60, 40 90 C40 120, 50 135, 70 135" id="fpl5"/>
+                    <path d="M70 40 C90 40, 100 60, 100 90 C100 120, 90 135, 70 135" id="fpl6"/>
+                    <path d="M70 52 C57 52, 50 65, 50 90 C50 115, 57 125, 70 125" id="fpl7"/>
+                    <path d="M70 52 C83 52, 90 65, 90 90 C90 115, 83 125, 70 125" id="fpl8"/>
+                    <path d="M70 64 C63 64, 58 72, 58 90 C58 108, 63 115, 70 115" id="fpl9"/>
+                    <path d="M70 64 C77 64, 82 72, 82 90 C82 108, 77 115, 70 115" id="fpl10"/>
+                    <path d="M70 75 C67 75, 65 80, 65 90 C65 100, 67 105, 70 105" id="fpl11"/>
+                    <path d="M70 75 C73 75, 75 80, 75 90 C75 100, 73 105, 70 105" id="fpl12"/>
+                </svg>
+                <div class="fp-scan" id="fpScan2"></div>
+                <div class="bio-check" id="fpCheck2">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+            </div>
+            <p class="text-white/50 text-sm mt-6 font-medium" id="fpText">Touch your fingerprint sensor</p>
+        </div>
+
+        <!-- Face ID Animation -->
+        <div id="bioFaceId" class="flex flex-col items-center hidden">
+            <div class="face-wrap" id="faceWrap">
+                <div class="face-glow" id="faceGlow2"></div>
+                <div class="face-corner tl" id="fc1"></div>
+                <div class="face-corner tr" id="fc2"></div>
+                <div class="face-corner bl" id="fc3"></div>
+                <div class="face-corner br" id="fc4"></div>
+                <svg class="face-features" viewBox="0 0 90 90" id="faceFeatures">
+                    <circle cx="30" cy="30" r="5" fill="none" stroke="#8b5cf6" stroke-width="2.5"/>
+                    <circle cx="30" cy="30" r="2" fill="#8b5cf6"/>
+                    <circle cx="60" cy="30" r="5" fill="none" stroke="#8b5cf6" stroke-width="2.5"/>
+                    <circle cx="60" cy="30" r="2" fill="#8b5cf6"/>
+                    <path d="M45 38 L43 50 L47 50" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M32 62 Q45 75 58 62" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+                <div class="face-scan" id="faceScan2"></div>
+                <div class="bio-check" id="faceCheck2">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+            </div>
+            <p class="text-white/50 text-sm mt-6 font-medium" id="faceText">Look at your device</p>
+        </div>
+
+        <!-- Cancel hint -->
+        <p class="text-white/20 text-xs mt-10">Waiting for device verification...</p>
+    </div>
+</div>
 
 <!-- Main Content -->
 <div class="relative z-10 min-h-screen flex flex-col items-center px-4 py-8 sm:py-14">
@@ -410,6 +576,151 @@ gsap.to('#blob5', { x: 90, y: 50, duration: 22, repeat: -1, yoyo: true, ease: 's
     }
 })();
 
+// ─── Biometric Overlay Animations ───
+
+function showBioOverlay(type) {
+    const overlay = document.getElementById('bioOverlay');
+    const fpEl = document.getElementById('bioFingerprint');
+    const faceEl = document.getElementById('bioFaceId');
+
+    overlay.classList.add('active');
+    gsap.from(overlay, { opacity: 0, duration: .3 });
+
+    if (type === 'faceid') {
+        fpEl.classList.add('hidden');
+        faceEl.classList.remove('hidden');
+        playFaceIdAnim();
+    } else {
+        faceEl.classList.add('hidden');
+        fpEl.classList.remove('hidden');
+        playFingerprintAnim();
+    }
+}
+
+function hideBioOverlay(success) {
+    const overlay = document.getElementById('bioOverlay');
+    if (!overlay.classList.contains('active')) return;
+
+    if (success) {
+        // Show success check
+        const isFingerprint = !document.getElementById('bioFingerprint').classList.contains('hidden');
+        const checkEl = isFingerprint ? '#fpCheck2' : '#faceCheck2';
+        const textEl = isFingerprint ? document.getElementById('fpText') : document.getElementById('faceText');
+        const wrapEl = isFingerprint ? document.getElementById('fpWrap') : document.getElementById('faceWrap');
+
+        textEl.textContent = 'Verified!';
+        textEl.style.color = 'rgba(16,185,129,.8)';
+
+        // Particles burst
+        for (let i = 0; i < 12; i++) {
+            const p = document.createElement('div');
+            p.className = 'bio-particle';
+            p.style.background = i % 2 === 0 ? '#8b5cf6' : '#06b6d4';
+            p.style.left = '50%'; p.style.top = '50%';
+            wrapEl.appendChild(p);
+            const angle = (Math.PI * 2 / 12) * i;
+            gsap.to(p, {
+                x: Math.cos(angle) * (50 + Math.random() * 40),
+                y: Math.sin(angle) * (50 + Math.random() * 40),
+                opacity: 0, scale: 0,
+                duration: .7 + Math.random() * .3,
+                ease: 'power2.out',
+                onComplete: () => p.remove()
+            });
+        }
+
+        gsap.to(checkEl, { opacity: 1, scale: 1, duration: .5, ease: 'back.out(2)' });
+        gsap.to(checkEl + ' svg', { strokeDashoffset: 0, duration: .4, delay: .2, ease: 'power2.out' });
+
+        gsap.to(overlay, { opacity: 0, duration: .4, delay: 1.2, onComplete: () => {
+            overlay.classList.remove('active');
+            resetBioOverlay();
+        }});
+    } else {
+        gsap.to(overlay, { opacity: 0, duration: .3, onComplete: () => {
+            overlay.classList.remove('active');
+            resetBioOverlay();
+        }});
+    }
+}
+
+function resetBioOverlay() {
+    // Reset fingerprint
+    gsap.set('#fpWrap svg path', { stroke: 'rgba(139,92,246,.25)' });
+    gsap.set('#fpScan2', { opacity: 0, top: 0 });
+    gsap.set('#fpGlow2', { opacity: 0, scale: 1 });
+    gsap.set('#fpCheck2', { opacity: 0, scale: 0 });
+    gsap.set('#fpCheck2 svg', { strokeDashoffset: 50 });
+    document.getElementById('fpText').textContent = 'Touch your fingerprint sensor';
+    document.getElementById('fpText').style.color = '';
+
+    // Reset face
+    gsap.set('.face-corner', { opacity: 0, borderColor: 'rgba(139,92,246,.3)' });
+    gsap.set('#faceFeatures', { opacity: 0 });
+    gsap.set('#faceScan2', { opacity: 0, top: 0 });
+    gsap.set('#faceGlow2', { opacity: 0, scale: 1 });
+    gsap.set('#faceCheck2', { opacity: 0, scale: 0 });
+    gsap.set('#faceCheck2 svg', { strokeDashoffset: 50 });
+    document.getElementById('faceText').textContent = 'Look at your device';
+    document.getElementById('faceText').style.color = '';
+}
+
+let fpAnimTimeline = null;
+function playFingerprintAnim() {
+    if (fpAnimTimeline) fpAnimTimeline.kill();
+    fpAnimTimeline = gsap.timeline({ repeat: -1, repeatDelay: 1 });
+
+    fpAnimTimeline
+        .to('#fpWrap svg path', { stroke: 'rgba(139,92,246,.6)', duration: .5, stagger: .06, ease: 'power2.out' })
+        .to('#fpScan2', { opacity: 1, duration: .15 }, '-=.3')
+        .fromTo('#fpScan2', { top: 0 }, { top: '100%', duration: 1.4, ease: 'power1.inOut' })
+        .to('#fpWrap svg path', { stroke: '#8b5cf6', duration: .3, stagger: .04 }, '-=.9')
+        .to('#fpGlow2', { opacity: 1, duration: .4 }, '-=.5')
+        .to('#fpScan2', { opacity: 0, duration: .2 })
+        .set(document.getElementById('fpText'), { textContent: 'Scanning...' })
+        .to('#fpGlow2', { scale: 1.4, opacity: 0, duration: .7, ease: 'power2.out' })
+        .to('#fpWrap svg path', { stroke: 'rgba(139,92,246,.25)', duration: .5, stagger: .03 })
+        .set(document.getElementById('fpText'), { textContent: 'Touch your fingerprint sensor' })
+        .set('#fpGlow2', { scale: 1 });
+}
+
+let faceAnimTimeline = null;
+function playFaceIdAnim() {
+    if (faceAnimTimeline) faceAnimTimeline.kill();
+    faceAnimTimeline = gsap.timeline({ repeat: -1, repeatDelay: 1.5 });
+
+    faceAnimTimeline
+        .to('.face-corner', { opacity: 1, duration: .3, stagger: .08 })
+        .to('.face-corner', { borderColor: '#8b5cf6', duration: .3 })
+        .to('#faceFeatures', { opacity: 1, duration: .6, ease: 'power2.out' })
+        .set(document.getElementById('faceText'), { textContent: 'Scanning face...' })
+        .to('#faceScan2', { opacity: 1, duration: .1 })
+        .fromTo('#faceScan2', { top: '10px' }, { top: '150px', duration: 1.2, ease: 'power1.inOut' })
+        .to('#faceGlow2', { opacity: 1, duration: .3 }, '-=.6')
+        .to('#faceScan2', { opacity: 0, duration: .2 })
+        .to('.face-corner', { borderColor: '#06b6d4', duration: .3 })
+        .to('#faceGlow2', { scale: 1.4, opacity: 0, duration: .6, ease: 'power2.out' })
+        .to('#faceFeatures', { opacity: 0, duration: .4 })
+        .to('.face-corner', { opacity: 0, borderColor: 'rgba(139,92,246,.3)', duration: .3 })
+        .set(document.getElementById('faceText'), { textContent: 'Look at your device' })
+        .set('#faceGlow2', { scale: 1 });
+}
+
+function stopBioAnim() {
+    if (fpAnimTimeline) { fpAnimTimeline.kill(); fpAnimTimeline = null; }
+    if (faceAnimTimeline) { faceAnimTimeline.kill(); faceAnimTimeline = null; }
+}
+
+// Detect if device likely uses Face ID (iOS with no home button) or fingerprint
+function detectBioType() {
+    const ua = navigator.userAgent;
+    // iPhones X+ (Face ID) - rough detection
+    if (/iPhone/.test(ua) && !/iPhone [5-8]/.test(ua)) return 'faceid';
+    // iPad Pro with Face ID
+    if (/iPad/.test(ua) && /Mac OS X/.test(ua)) return 'faceid';
+    return 'fingerprint';
+}
+
 // ─── Entrance Animations ───
 
 gsap.from('#header', { opacity: 0, y: -40, duration: 1, ease: 'power3.out' });
@@ -537,8 +848,9 @@ async function registerPasskey(isAdd = false) {
         pk.challenge = base64urlToBuffer(pk.challenge);
         pk.user.id = new TextEncoder().encode(pk.user.id);
         if (pk.excludeCredentials) pk.excludeCredentials = pk.excludeCredentials.map(c => ({ ...c, id: base64urlToBuffer(c.id) }));
-        toast('Verify on your device...', 'info');
+        showBioOverlay(detectBioType());
         const cred = await navigator.credentials.create({ publicKey: pk });
+        stopBioAnim();
         const b = { id: cred.id, rawId: bufferToBase64url(cred.rawId), type: cred.type,
             response: { clientDataJSON: bufferToBase64url(cred.response.clientDataJSON), attestationObject: bufferToBase64url(cred.response.attestationObject), transports: cred.response.getTransports?.() || [] },
             authenticatorAttachment: cred.authenticatorAttachment || undefined, device_name: deviceName };
@@ -546,11 +858,12 @@ async function registerPasskey(isAdd = false) {
         if (cred.response.getAuthenticatorData) b.response.authenticatorData = bufferToBase64url(cred.response.getAuthenticatorData());
         if (!isAdd) b.user_id = userId;
         const vRes = await api('POST', isAdd ? '/auth/passkeys/add/verify' : '/auth/passkey/register/verify', b, isAdd);
+        hideBioOverlay(vRes.success);
         if (!vRes.success) return toast(vRes.message, 'error');
         toast('Passkey registered!', 'success');
         if (vRes.data.token) { authToken = vRes.data.token; localStorage.setItem('auth_token', authToken); }
         if (isAdd) loadPasskeys(); else { await loadProfile(); showView('loggedIn'); loadPasskeys(); }
-    } catch (e) { toast(e.name === 'NotAllowedError' ? 'Cancelled.' : 'Error: ' + e.message, 'error'); }
+    } catch (e) { stopBioAnim(); hideBioOverlay(false); toast(e.name === 'NotAllowedError' ? 'Cancelled.' : 'Error: ' + e.message, 'error'); }
 }
 
 function skipPasskeySetup() { toast('You can add a passkey later.', 'info'); showView('loggedOut'); }
@@ -564,18 +877,20 @@ async function passkeyLogin(discoverable = false) {
         const pk = oRes.data.publicKey;
         pk.challenge = base64urlToBuffer(pk.challenge);
         if (pk.allowCredentials) pk.allowCredentials = pk.allowCredentials.map(c => ({ ...c, id: base64urlToBuffer(c.id) }));
-        toast('Verify on your device...', 'info');
+        showBioOverlay(detectBioType());
         const a = await navigator.credentials.get({ publicKey: pk });
+        stopBioAnim();
         const b = { id: a.id, rawId: bufferToBase64url(a.rawId), type: a.type,
             response: { clientDataJSON: bufferToBase64url(a.response.clientDataJSON), authenticatorData: bufferToBase64url(a.response.authenticatorData),
                 signature: bufferToBase64url(a.response.signature), userHandle: a.response.userHandle ? bufferToBase64url(a.response.userHandle) : null },
             authenticatorAttachment: a.authenticatorAttachment || undefined };
         const vRes = await api('POST', '/auth/passkey/login/verify', b);
+        hideBioOverlay(vRes.success);
         if (!vRes.success) return toast(vRes.message, 'error');
         authToken = vRes.data.token; localStorage.setItem('auth_token', authToken); currentUser = vRes.data.user;
         toast('Welcome back, ' + currentUser.name + '!', 'success');
         showProfile(); showView('loggedIn'); loadPasskeys();
-    } catch (e) { toast(e.name === 'NotAllowedError' ? 'Cancelled.' : 'Error: ' + e.message, 'error'); }
+    } catch (e) { stopBioAnim(); hideBioOverlay(false); toast(e.name === 'NotAllowedError' ? 'Cancelled.' : 'Error: ' + e.message, 'error'); }
 }
 
 async function passwordLogin() {
