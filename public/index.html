@@ -429,6 +429,10 @@
                     <button onclick="passwordLogin()" class="w-full py-3.5 bg-white/5 hover:bg-white/8 text-white/40 text-sm font-medium rounded-xl border border-white/5 hover:border-white/10 transition-all btn-press">
                         Sign in with Password
                     </button>
+
+                    <button onclick="clearSession()" class="w-full mt-4 py-2 text-white/20 text-xs hover:text-white/40 transition-all">
+                        Clear saved session
+                    </button>
                 </div>
             </div>
 
@@ -960,6 +964,11 @@ async function logout() {
     await api('POST', '/auth/logout', null, true);
     authToken = null; currentUser = null; localStorage.removeItem('auth_token');
     toast('Signed out.', 'success'); showView('loggedOut');
+}
+
+function clearSession() {
+    authToken = null; currentUser = null; localStorage.removeItem('auth_token');
+    toast('Session cleared.', 'success');
 }
 
 async function init() {
