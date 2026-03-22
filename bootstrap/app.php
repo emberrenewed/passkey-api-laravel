@@ -20,9 +20,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         ]);
 
-        $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
+        // Token-based API only — no session/CSRF needed.
+        // EnsureFrontendRequestsAreStateful causes CSRF errors on serverless.
+        // Sanctum token auth works without it.
 
         $middleware->alias([
             'passkey.enabled' => \App\Http\Middleware\EnsurePasskeyEnabled::class,
