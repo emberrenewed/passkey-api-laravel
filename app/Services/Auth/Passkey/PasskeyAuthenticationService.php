@@ -88,10 +88,18 @@ class PasskeyAuthenticationService
             ],
         );
 
+        // Dynamic RP ID handling for local development:
+        // If RP ID is 'localhost', we allow it to match the actual host (e.g. 127.0.0.1)
+        // to prevent "Invalid Domain" errors in the browser.
+        $rpId = $this->configService->getRpId();
+        if ($rpId === 'localhost') {
+            $rpId = $request->getHost();
+        }
+
         $options = [
             'challenge' => $challenge->challenge,
             'timeout' => $this->configService->getTimeoutMs(),
-            'rpId' => $this->configService->getRpId(),
+            'rpId' => $rpId,
             'userVerification' => $this->configService->getUserVerification(),
         ];
 
@@ -175,7 +183,7 @@ class PasskeyAuthenticationService
         }
 
         // Step 4: Verify RP ID hash from authenticator data.
-        $this->verifyRpIdFromAuthData($assertionData);
+        $this->verifyRpIdFromAuthData($assertionData, $request);
 
         // Step 5: Verify user flags (User Present, User Verified).
         $this->verifyUserFlags($assertionData);
@@ -270,7 +278,7 @@ class PasskeyAuthenticationService
     /**
      * Verify RP ID hash from authenticator data.
      */
-    private function verifyRpIdFromAuthData(array $assertionData): void
+    private function verifyRpIdFromAuthData(array $assertionData, Request $request): void
     {
         $authDataB64 = $assertionData['response']['authenticatorData'] ?? null;
         if (!$authDataB64) {
@@ -287,14 +295,27 @@ class PasskeyAuthenticationService
 
         // First 32 bytes = SHA-256(RP ID)
         $rpIdHash = substr($authData, 0, 32);
-        $expectedRpIdHash = hash('sha256', $this->configService->getRpId(), true);
 
-        if (!hash_equals($expectedRpIdHash, $rpIdHash)) {
-            throw new WebAuthnException(
-                'RP ID validation failed. The credential was not created for this relying party.',
-                ErrorCode::INVALID_RP_ID,
-            );
+        // Allow both the configured RP ID and the actual host for local development.
+        $configuredRpId = $this->configService->getRpId();
+        $expectedRpIdHash = hash('sha256', $configuredRpId, true);
+
+        if (hash_equals($expectedRpIdHash, $rpIdHash)) {
+            return;
         }
+
+        // If it didn't match and we're on localhost, also try matching against the current host.
+        if ($configuredRpId === 'localhost') {
+            $currentHostHash = hash('sha256', $request->getHost(), true);
+            if (hash_equals($currentHostHash, $rpIdHash)) {
+                return;
+            }
+        }
+
+        throw new WebAuthnException(
+            'RP ID validation failed. The credential was not created for this relying party.',
+            ErrorCode::INVALID_RP_ID,
+        );
     }
 
     /**
@@ -384,7 +405,7 @@ class PasskeyAuthenticationService
             $algorithm = $this->getCoseAlgorithm($publicKeyRaw);
         }
 
-        if (!$publicKeyPem) {
+        if ($algorithm !== -8 && !$publicKeyPem) {
             throw new WebAuthnException(
                 'Failed to process the stored public key.',
                 ErrorCode::PASSKEY_VERIFICATION_FAILED,

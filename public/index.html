@@ -357,7 +357,12 @@
     <div class="w-full max-w-[420px]">
 
         <!-- Header -->
-        <header class="text-center mb-10" id="header">
+        <header class="text-center mb-10 relative" id="header">
+            <!-- Logout Button (Top Right) -->
+            <button onclick="logout()" id="headerLogoutBtn" class="hidden absolute top-0 right-0 p-3 bg-white/5 hover:bg-red-500/10 text-white/30 hover:text-red-400 rounded-2xl border border-white/5 hover:border-red-500/20 transition-all btn-press group" title="Sign Out">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+
             <div class="relative inline-flex items-center justify-center w-[72px] h-[72px] bg-gradient-to-br from-violet-500 to-cyan-400 rounded-[22px] mb-6 shadow-2xl shadow-violet-500/30">
                 <div class="pulse-ring"></div>
                 <svg class="w-9 h-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -759,7 +764,26 @@ async function api(method, path, body = null, auth = false) {
     if (auth && authToken) h['Authorization'] = 'Bearer ' + authToken;
     const o = { method, headers: h };
     if (body) o.body = JSON.stringify(body);
-    return (await fetch(API + path, o)).json();
+
+    try {
+        const response = await fetch(API + path, o);
+        
+        // Handle unauthorized (expired token)
+        if (response.status === 401 && auth) {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('auth_token');
+            showView('loggedOut');
+            toast('Session expired. Please sign in again.', 'info');
+            return { success: false, message: 'Unauthorized' };
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (e) {
+        console.error('API Error:', e);
+        return { success: false, message: 'Network or server error.' };
+    }
 }
 
 function toast(msg, type = 'info') {
@@ -795,6 +819,9 @@ function switchTab(tab) {
 }
 
 function showView(view) {
+    // Toggle header logout button
+    document.getElementById('headerLogoutBtn').classList.toggle('hidden', view !== 'loggedIn');
+
     ['loggedOutView','passkeySetupView','loggedInView'].forEach(id => {
         const el = document.getElementById(id);
         const show = (view === 'loggedOut' && id === 'loggedOutView') ||
